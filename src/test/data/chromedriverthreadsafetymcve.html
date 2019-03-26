@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title></title>
+	</head>
+	<body>
+		<input type="text" id="input" value="foo bar baz">
+
+		<script type="text/javascript">
+			const input = document.querySelector("#input");
+
+			input.addEventListener("focusin", () => {
+				console.info("focusin");
+
+				const preventDeselection = (evt) => {
+					evt.preventDefault();
+					console.info("mouseup, prevented");
+
+					// See note on the (commented) addEventListener() below
+					input.removeEventListener("mouseup", preventDeselection);
+				};
+
+				// Note: attempt to prevent deselect due to the following
+				// (completed) click. This works very well to solve issues
+				// in Chrome ~72 for manual interactions but does not help
+				// with ChromeDriver issues.
+				input.addEventListener("mouseup", preventDeselection);
+
+				// In Chrome click follows the focusin event eventually
+				// destroying the selection after the fact
+				setTimeout(() => {
+					console.info("select");
+					input.setSelectionRange(0, input.value.length);
+				});
+			});
+
+			input.addEventListener("click", () => {
+				console.info("click");
+
+				// Moving the selection here would solve the issue despite
+				// the fact that selection on TAB navigation would not work
+				// through this way.
+			});
+		</script>
+	</body>
+</html>

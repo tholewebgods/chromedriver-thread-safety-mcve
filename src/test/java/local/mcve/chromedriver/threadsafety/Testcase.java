@@ -14,6 +14,8 @@ import org.openqa.selenium.Point;
 import org.openqa.selenium.WebDriver.Window;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.firefox.FirefoxDriver;
+import org.openqa.selenium.firefox.FirefoxProfile;
 import org.openqa.selenium.logging.LogEntry;
 import org.openqa.selenium.logging.LogType;
 import org.openqa.selenium.logging.LoggingPreferences;
@@ -34,6 +36,7 @@ public class Testcase {
 
 	private static final int TEST_COUNT = 7;
 
+	static final boolean useFirefox = Boolean.parseBoolean(System.getProperty("usegecko"));
 	static int finishCount = 0;
 
 	ThreadLocal<RemoteWebDriver> driver = new ThreadLocal<>();
@@ -51,20 +54,28 @@ public class Testcase {
 		DesiredCapabilities dc = new DesiredCapabilities();
 
 		dc.setPlatform(Platform.fromString("linux"));
-		dc.setBrowserName(DesiredCapabilities.chrome().getBrowserName());
-		Map<String, Object> prefs = new HashMap<>();
-		prefs.put("intl.accept_languages", "de-DE, de");
-		prefs.put("profile.default_content_settings.popups", 0);
 
-		ChromeOptions options = new ChromeOptions();
-		options.setExperimentalOption("prefs", prefs);
-		options.addArguments("--test-type");
-		options.addArguments("--lang=de");
-		dc.setCapability(ChromeOptions.CAPABILITY, options);
+		if (useFirefox) {
+			dc.setBrowserName(DesiredCapabilities.firefox().getBrowserName());
+			FirefoxProfile profile = new FirefoxProfile();
+			profile.setPreference("intl.accept_languages", "de-DE, de");
+			dc.setCapability(FirefoxDriver.PROFILE, profile);
+		} else {
+			dc.setBrowserName(DesiredCapabilities.chrome().getBrowserName());
+			Map<String, Object> prefs = new HashMap<>();
+			prefs.put("intl.accept_languages", "de-DE, de");
+			prefs.put("profile.default_content_settings.popups", 0);
 
-		LoggingPreferences loggingprefs = new LoggingPreferences();
-		loggingprefs.enable(LogType.BROWSER, Level.ALL);
-		dc.setCapability(CapabilityType.LOGGING_PREFS, loggingprefs);
+			ChromeOptions options = new ChromeOptions();
+			options.setExperimentalOption("prefs", prefs);
+			options.addArguments("--test-type");
+			options.addArguments("--lang=de");
+			dc.setCapability(ChromeOptions.CAPABILITY, options);
+
+			LoggingPreferences loggingprefs = new LoggingPreferences();
+			loggingprefs.enable(LogType.BROWSER, Level.ALL);
+			dc.setCapability(CapabilityType.LOGGING_PREFS, loggingprefs);
+		}
 
 		try {
 			RemoteWebDriver driver = new RemoteWebDriver(new URL(SELENIUM_URL), dc);
@@ -88,9 +99,12 @@ public class Testcase {
 			finishCount++;
 		}
 
-		List<LogEntry> entries = this.driver.get().manage().logs().get(LogType.BROWSER).filter(Level.INFO);
-		for (LogEntry entry : entries) {
-			System.out.println(String.format("%d [%s] %s", entry.getTimestamp(), driver.get().getSessionId(), entry.getMessage()));
+		// Log retrieval not supported by Geckodriver (0.24) yet
+		if (!useFirefox) {
+			List<LogEntry> entries = this.driver.get().manage().logs().get(LogType.BROWSER).filter(Level.INFO);
+			for (LogEntry entry : entries) {
+				System.out.println(String.format("%d [%s] %s", entry.getTimestamp(), driver.get().getSessionId(), entry.getMessage()));
+			}
 		}
 
 		this.driver.get().quit();
